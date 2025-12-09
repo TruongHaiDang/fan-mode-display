@@ -13,6 +13,7 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 add_executable(fan-mode-display
     src/main.cpp
     ui/mainpopup.cpp
+    core/asus_tuf_fx705ge.cpp
 )
 
 target_include_directories(fan-mode-display

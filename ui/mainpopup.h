@@ -2,6 +2,16 @@
 
 #include <QPixmap>
 #include <QWidget>
+#include <QFont>
+#include <QFrame>
+#include <QGraphicsDropShadowEffect>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QPainter>
+#include <QPushButton>
+#include <QToolButton>
+#include <QVBoxLayout>
+#include "asus_tuf_fx705ge.h"
 
 class QLabel;
 class QPushButton;

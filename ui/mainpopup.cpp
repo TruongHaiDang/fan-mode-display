@@ -1,15 +1,5 @@
 #include "mainpopup.h"
 
-#include <QFont>
-#include <QFrame>
-#include <QGraphicsDropShadowEffect>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QPainter>
-#include <QPushButton>
-#include <QToolButton>
-#include <QVBoxLayout>
-
 namespace {
 QLabel *makeLabel(const QString &text, int pointSize, QFont::Weight weight, const QString &color)
 {
@@ -26,9 +16,20 @@ QLabel *makeLabel(const QString &text, int pointSize, QFont::Weight weight, cons
 MainPopup::MainPopup(QWidget *parent)
     : QWidget(parent)
 {
+    // 1. Ẩn khung cửa sổ, hạn chế hiện trên taskbar
+    setWindowFlags(windowFlags()
+                   | Qt::FramelessWindowHint
+                   | Qt::Tool);
+
+    // 2. Cho phép nền trong suốt để chỉ thấy cái card
+    setAttribute(Qt::WA_TranslucentBackground);
+    
     setObjectName("popupWindow");
     setFixedSize(450, 450);
-    setStyleSheet(QStringLiteral("#popupWindow { background-color: #0f1720; }"));
+    // Nền widget gốc trong suốt, chỉ card có màu
+    setStyleSheet(QStringLiteral(
+        "#popupWindow { background-color: transparent; }"
+    ));
 
     auto *rootLayout = new QVBoxLayout(this);
     rootLayout->setContentsMargins(0, 0, 0, 0);
@@ -140,7 +141,7 @@ MainPopup::MainPopup(QWidget *parent)
     metricsLayout->addWidget(metricColumn(QStringLiteral("CPU Temperature"), &m_cpuTempValue), 0, Qt::AlignRight);
     cardLayout->addLayout(metricsLayout);
 
-    auto *settingsButton = new QPushButton(QStringLiteral("Go to Settings"));
+    auto *settingsButton = new QPushButton(QStringLiteral("Change Mode"));
     settingsButton->setCursor(Qt::PointingHandCursor);
     settingsButton->setFixedHeight(42);
     settingsButton->setStyleSheet(QStringLiteral(
