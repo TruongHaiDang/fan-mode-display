@@ -1,20 +1,12 @@
 #pragma once
 
 #include <QPixmap>
+#include <QVector>
 #include <QWidget>
-#include <QFont>
-#include <QFrame>
-#include <QGraphicsDropShadowEffect>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QPainter>
-#include <QPushButton>
-#include <QToolButton>
-#include <QVBoxLayout>
-#include "asus_tuf_fx705ge.h"
 
 class QLabel;
-class QPushButton;
+class QVBoxLayout;
+class QGridLayout;
 
 class MainPopup : public QWidget
 {
@@ -25,8 +17,8 @@ public:
 
     void setFanData(const QString &modeName,
                     const QString &description,
-                    const QString &fanSpeed,
-                    const QString &cpuTemperature);
+                    const QVector<int> &fanSpeedsRpm,
+                    const QVector<double> &temperaturesC);
 
 signals:
     void dismissed();
@@ -34,8 +26,11 @@ signals:
 private:
     QLabel *m_modeLabel{};
     QLabel *m_descriptionLabel{};
-    QLabel *m_fanSpeedValue{};
-    QLabel *m_cpuTempValue{};
+    QVBoxLayout *m_fanListLayout{};
+    QGridLayout *m_tempGrid{};
 
+    void renderFans(const QVector<int> &fanSpeedsRpm);
+    void renderTemperatures(const QVector<double> &temperaturesC);
+    static void clearLayout(QLayout *layout);
     QPixmap buildIconPixmap(int diameter) const;
 };

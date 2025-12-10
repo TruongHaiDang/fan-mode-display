@@ -1,32 +1,27 @@
 #include "main.h"
 
-#include <optional>
-
-namespace {
-QString formatFanSpeed(const std::optional<int> &rpm)
-{
-    if (!rpm) {
-        return QStringLiteral("--");
-    }
-    return QStringLiteral("%1 RPM").arg(*rpm);
-}
-
-QString formatTemperature(const std::optional<double> &celsius)
-{
-    if (!celsius) {
-        return QStringLiteral("--");
-    }
-    return QStringLiteral("%1 C").arg(QString::number(*celsius, 'f', 1));
-}
-} // namespace
+#include <QVector>
+#include <vector>
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
     AsusTufFx705ge telemetry;
-    const auto fanSpeed = telemetry.readFanSpeedRpm();
-    const auto averageTemp = telemetry.readAverageTemperatureCelsius();
+    const auto fanSpeeds = telemetry.readAllFanSpeedsRpm();
+    const auto temps = telemetry.readAllTemperaturesCelsius();
+    const auto modeLabel = QString::fromStdString(telemetry.readFanBoostModeLabel());
+
+    QVector<int> fanValues;
+    fanValues.reserve(static_cast<int>(fanSpeeds.size()));
+    for (const auto value : fanSpeeds) {
+        fanValues.append(value);
+    }
+    QVector<double> tempValues;
+    tempValues.reserve(static_cast<int>(temps.size()));
+    for (const auto value : temps) {
+        tempValues.append(value);
+    }
 
     MainPopup popup;
 
@@ -34,10 +29,10 @@ int main(int argc, char *argv[])
         &app, &QCoreApplication::quit);
 
     popup.setFanData(
-        QStringLiteral("Performance Mode"),
+        modeLabel,
         QStringLiteral("Live fan telemetry for ASUS TUF FX705GE."),
-        formatFanSpeed(fanSpeed),
-        formatTemperature(averageTemp));
+        fanValues,
+        tempValues);
     popup.show();
 
     return app.exec();

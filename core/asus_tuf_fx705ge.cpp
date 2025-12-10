@@ -4,23 +4,42 @@ namespace fs = std::filesystem;
 
 std::optional<int> AsusTufFx705ge::readFanSpeedRpm() const
 {
+    const auto speeds = readAllFanSpeedsRpm();
+    if (speeds.empty()) {
+        return std::nullopt;
+    }
+    return *std::max_element(speeds.begin(), speeds.end());
+}
+
+std::optional<double> AsusTufFx705ge::readAverageTemperatureCelsius() const
+{
+    const auto temps = readAllTemperaturesCelsius();
+    if (temps.empty()) {
+        return std::nullopt;
+    }
+
+    const auto sum = std::accumulate(temps.begin(), temps.end(), 0.0);
+    return sum / static_cast<double>(temps.size());
+}
+
+std::vector<int> AsusTufFx705ge::readAllFanSpeedsRpm() const
+{
     const std::vector<std::string> preferredNames = {"asus", "asus-isa", "asus_wmi", "asusec"};
     auto candidateHwmons = hwmonDirectoriesMatching(preferredNames);
     if (candidateHwmons.empty()) {
         candidateHwmons = hwmonDirectories();
     }
 
+    std::vector<int> allSpeeds;
     for (const auto &dir : candidateHwmons) {
         const auto speeds = readFanInputs(dir);
-        if (!speeds.empty()) {
-            return *std::max_element(speeds.begin(), speeds.end());
-        }
+        allSpeeds.insert(allSpeeds.end(), speeds.begin(), speeds.end());
     }
 
-    return std::nullopt;
+    return allSpeeds;
 }
 
-std::optional<double> AsusTufFx705ge::readAverageTemperatureCelsius() const
+std::vector<double> AsusTufFx705ge::readAllTemperaturesCelsius() const
 {
     const std::vector<std::string> preferredNames = {"coretemp", "asus", "asus-isa", "acpitz"};
     auto candidateHwmons = hwmonDirectoriesMatching(preferredNames);
@@ -28,23 +47,20 @@ std::optional<double> AsusTufFx705ge::readAverageTemperatureCelsius() const
         candidateHwmons = hwmonDirectories();
     }
 
+    std::vector<double> tempsC;
     for (const auto &dir : candidateHwmons) {
         const auto tempsMilli = readTemperatureInputs(dir);
-        if (!tempsMilli.empty()) {
-            const auto sum = std::accumulate(tempsMilli.begin(), tempsMilli.end(), 0L);
-            const double averageMilli = static_cast<double>(sum) / static_cast<double>(tempsMilli.size());
-            return averageMilli / 1000.0;
+        for (const auto milli : tempsMilli) {
+            tempsC.push_back(static_cast<double>(milli) / 1000.0);
         }
     }
 
     const auto thermalTemps = readThermalZoneTemperatures();
-    if (!thermalTemps.empty()) {
-        const auto sum = std::accumulate(thermalTemps.begin(), thermalTemps.end(), 0L);
-        const double averageMilli = static_cast<double>(sum) / static_cast<double>(thermalTemps.size());
-        return averageMilli / 1000.0;
+    for (const auto milli : thermalTemps) {
+        tempsC.push_back(static_cast<double>(milli) / 1000.0);
     }
 
-    return std::nullopt;
+    return tempsC;
 }
 
 std::vector<fs::path> AsusTufFx705ge::hwmonDirectories()
@@ -55,8 +71,9 @@ std::vector<fs::path> AsusTufFx705ge::hwmonDirectories()
         return result;
     }
 
-    for (const auto &entry : fs::directory_iterator(hwmonRoot)) {
-        if (entry.is_directory()) {
+    const auto options = fs::directory_options::follow_directory_symlink;
+    for (const auto &entry : fs::directory_iterator(hwmonRoot, options)) {
+        if (entry.is_directory() || entry.is_symlink()) {
             result.push_back(entry.path());
         }
     }
@@ -100,8 +117,9 @@ std::vector<int> AsusTufFx705ge::readFanInputs(const fs::path &hwmonDir)
         return speeds;
     }
 
-    for (const auto &entry : fs::directory_iterator(hwmonDir)) {
-        if (!entry.is_regular_file()) {
+    const auto options = fs::directory_options::follow_directory_symlink;
+    for (const auto &entry : fs::directory_iterator(hwmonDir, options)) {
+        if (!entry.is_regular_file() && !entry.is_symlink()) {
             continue;
         }
 
@@ -111,7 +129,7 @@ std::vector<int> AsusTufFx705ge::readFanInputs(const fs::path &hwmonDir)
         }
 
         auto value = readLongFromFile(entry.path());
-        if (value && *value > 0) {
+        if (value) {
             speeds.push_back(static_cast<int>(*value));
         }
     }
@@ -126,8 +144,9 @@ std::vector<long> AsusTufFx705ge::readTemperatureInputs(const fs::path &hwmonDir
         return temps;
     }
 
-    for (const auto &entry : fs::directory_iterator(hwmonDir)) {
-        if (!entry.is_regular_file()) {
+    const auto options = fs::directory_options::follow_directory_symlink;
+    for (const auto &entry : fs::directory_iterator(hwmonDir, options)) {
+        if (!entry.is_regular_file() && !entry.is_symlink()) {
             continue;
         }
 
@@ -153,7 +172,8 @@ std::vector<long> AsusTufFx705ge::readThermalZoneTemperatures()
         return temps;
     }
 
-    for (const auto &entry : fs::directory_iterator(thermalRoot)) {
+    const auto options = fs::directory_options::follow_directory_symlink;
+    for (const auto &entry : fs::directory_iterator(thermalRoot, options)) {
         if (!entry.is_directory() || !startsWith(entry.path().filename().string(), "thermal_zone")) {
             continue;
         }
@@ -166,6 +186,26 @@ std::vector<long> AsusTufFx705ge::readThermalZoneTemperatures()
     }
 
     return temps;
+}
+
+std::string AsusTufFx705ge::readFanBoostModeLabel() const
+{
+    const fs::path modePath("/sys/devices/platform/asus-nb-wmi/fan_boost_mode");
+    auto modeValue = readLongFromFile(modePath);
+    if (!modeValue) {
+        return "Unknown";
+    }
+
+    switch (*modeValue) {
+    case 0:
+        return "Normal";
+    case 1:
+        return "Performance/Overboost";
+    case 2:
+        return "Silent";
+    default:
+        return "Unknown";
+    }
 }
 
 std::optional<long> AsusTufFx705ge::readLongFromFile(const fs::path &filePath)

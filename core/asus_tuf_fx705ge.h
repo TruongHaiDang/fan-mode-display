@@ -20,6 +20,9 @@ class AsusTufFx705ge
 public:
     std::optional<int> readFanSpeedRpm() const;
     std::optional<double> readAverageTemperatureCelsius() const;
+    std::vector<int> readAllFanSpeedsRpm() const;
+    std::vector<double> readAllTemperaturesCelsius() const;
+    std::string readFanBoostModeLabel() const;
 
 private:
     static std::vector<std::filesystem::path> hwmonDirectories();
