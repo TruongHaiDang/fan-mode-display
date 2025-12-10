@@ -11,8 +11,13 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
 add_executable(fan-mode-display
+    inc/main.h
     src/main.cpp
+    inc/fanboostwatcher.h
+    src/fanboostwatcher.cpp
+    ui/mainpopup.h
     ui/mainpopup.cpp
+    core/asus_tuf_fx705ge.h
     core/asus_tuf_fx705ge.cpp
 )
 
