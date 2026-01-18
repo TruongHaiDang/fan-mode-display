@@ -32,3 +32,17 @@ WantedBy=graphical-session.target
 systemctl --user daemon-reload
 systemctl --user enable --now fan-mode-display.service
 ```
+
+# Các lệnh khác
+
+**Xem trạng thái status của service**
+
+```bash
+systemctl --user status fan-mode-display.service
+```
+
+**Khởi động/Dừng service**
+
+```bash
+systemctl --user start/stop fan-mode-display.service
+```
